@@ -1,0 +1,12 @@
+cat << 'EOF' > .gitignore
+venv/
+__pycache__/
+*.pyc
+.vscode/
+.env
+chrome_user_data/
+*.db
+*.sqlite
+*.sqlite3
+resume.*
+EOF
