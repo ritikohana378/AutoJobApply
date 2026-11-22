@@ -1,73 +1,89 @@
-# Auto Job Apply (LinkedIn)
+# Auto Job Apply (LinkedIn Edition)
 
-Auto Job Apply is a Python-based LinkedIn automation tool that discovers, evaluates, and applies to relevant Easy Apply roles using Playwright Chromium, a Flask monitoring dashboard, dynamic `resume.txt` parsing, and Google Gemini AI for form-filling.
+A customized, Python-based LinkedIn job application automation tool powered by Playwright Chromium, Flask, SQLite, and the Google Gemini API.
 
-It is designed to help you:
+## Origin & Attribution
 
-- search and apply to relevant LinkedIn Easy Apply jobs across global tech and banking hubs
-- filter out irrelevant domains and overly senior roles before applying
-- evaluate job fit dynamically against your live `resume.txt`
-- answer multi-step Easy Apply screening questions automatically using the Gemini API
-- track all applications locally in SQLite to prevent duplicate submissions
-- monitor progress through a lightweight Flask dashboard while keeping a visible browser window for human-in-the-loop checkpoints
+This project is based on the original open-source repository by **Madan Ayyanavara**:
+- **Original Repository:** [https://github.com/MadanAyyanavara/Auto_job_apply](https://github.com/MadanAyyanavara/Auto_job_apply)
 
-## Why this project exists
+Starting from that codebase, this version has been **re-architected and configured exclusively for LinkedIn** (with the Naukri driver removed) and tailored to custom requirements around target roles, global locations, salary conversion, resume parsing, and LinkedIn's updated UI.
 
-Applying to international roles manually involves repeating the same search filters, screening forms, and experience calculations across dozens of listings. This project automates the repetitive browser workflow while enforcing strict role/experience guardrails and pausing cleanly whenever LinkedIn prompts for login, 2FA, or CAPTCHA verification.
+---
 
-## Key features
+## Customizations & Modifications Made
 
-- **LinkedIn Easy Apply automation:** Targets jobs posted within the **past week** (`f_TPR=r604800`) with **Easy Apply** enabled (`f_AL=true`) across GCC (Saudi Arabia, UAE/Dubai, Qatar, Oman, Kuwait, Bahrain), European (UK, Switzerland, Germany, Netherlands, Ireland, Luxembourg, Austria, France, Belgium, Spain, Poland), and APAC/North American (Singapore, Hong Kong, Malaysia, Australia, Canada) hubs.
-- **Smart role & seniority filtering:** Automatically targets Software Development, Backend Engineering, Implementation Engineering, Application/Production Support, Software/Technical Consulting, and Core Banking roles while skipping Accounting, Finance, Pre-Sales, Sales, Project Management, HR, Staff, Manager, Principal, Director, VP, and roles requiring more than **4 years** of experience.
-- **Live `resume.txt` parsing & fit scoring:** Reads `resume.txt` directly from disk on every job so updates take effect immediately without restarting. Combines resume keyword overlap with Gemini semantic fit scoring against your `MATCH_THRESHOLD`.
-- **AI-powered screening form filler:** Auto-discovers active Gemini Flash models to fill text inputs, numeric fields, dropdowns, React SDUI radio button groups, and required checkboxes. Automatically skips CGPA/GPA fields, preserves pre-filled contact info, and converts your target salary (`TARGET_SALARY_LACS_PKR`) into each country's local currency.
-- **Visible Chromium & persistent sessions:** Launches Chromium in non-headless mode using `chrome_user_data/` so login cookies persist across runs, with automatic `.env` credential login and a human-in-the-loop pause for 2FA/CAPTCHA checkpoints.
-- **Flask web dashboard & SQLite tracking:** Monitor live status at `http://localhost:5000` and track applied/external jobs in `jobs.db` with a configurable `DAILY_LIMIT`.
-- **Optional Chrome extension:** Bundled extension in `extension/` for manual form autofill assistance.
+Compared to the upstream repository, this customized version includes the following updates:
 
-## Tech stack
+- **LinkedIn-Only Workflow:** Removed Naukri integration to focus exclusively on LinkedIn Easy Apply (`f_AL=true`) jobs posted within the **past week** (`f_TPR=r604800`).
+- **Role & Seniority Filtering:**
+  - Targets **Software Development, Backend Engineering, Implementation Engineering, Application/Production Support, Software/Technical Consulting**, and **Core Banking / Payments** roles.
+  - Automatically skips unrelated domains (**Accounting, Finance, Pre-Sales, Sales, Project Management, HR, Marketing**) and overly senior titles (**Staff, Manager, Principal, Director, VP, Chief**), as well as roles requiring **more than 4 years of experience**.
+- **Expanded Global & GCC Target Locations:** Configured verified LinkedIn Geo IDs across:
+  - **GCC / Middle East:** Saudi Arabia, United Arab Emirates (including Dubai), Qatar, Oman, Kuwait, and Bahrain.
+  - **Europe:** Switzerland, United Kingdom, Luxembourg, Germany, Netherlands, Ireland, Austria, France, Belgium, Spain, and Poland.
+  - **Asia-Pacific & North America:** Singapore, Hong Kong, Malaysia, Australia, and Canada.
+- **Location-Aware Salary Conversion:** Converts a configurable target salary in PKR Lacs (`TARGET_SALARY_LACS_PKR`) automatically into each job's local currency (`SAR`, `AED`, `QAR`, `OMR`, `KWD`, `BHD`, `SGD`, `EUR`, `GBP`, `CHF`, `PLN`, `HKD`, `MYR`, `AUD`, `CAD`, `USD`, `PKR`), accounting for monthly vs. annual phrasing.
+- **Live `resume.txt` Parsing & Smarter Screening Answers:**
+  - Reads `resume.txt` directly from disk on every job so resume edits apply immediately without restarting.
+  - Evaluates job fit by combining resume keyword overlap, experience-level compatibility, and Gemini scoring.
+  - Dynamically extracts personal contact details from `resume.txt`, protects pre-filled contact fields, skips CGPA/GPA fields, and applies consistent total experience across coding languages and technical tools (Python, Java, C++, InfoBasic, APIs, Docker, SQL, etc.).
+  - Handles common HR screening fields cleanly (reasonable adjustments, start availability, country of residence, visa sponsorship, and language proficiency).
+- **Updated LinkedIn UI & Gemini Reliability:**
+  - Fixed Easy Apply modal handling for LinkedIn's React SDUI `<dialog>` layout, including `<div>`-based radio button groups, dropdowns, character counters, and modal scrolling.
+  - Auto-discovers active Gemini Flash models via `list_models()` to avoid deprecated model errors.
+  - Runs Chromium in **visible (non-headless) mode** with persistent `chrome_user_data/` sessions and `.env`-based LinkedIn login with human-in-the-loop pauses for 2FA or CAPTCHA checkpoints.
 
-- Python 3.12+
-- Playwright (Chromium browser automation)
-- Google Gemini API (`google-generativeai`)
-- Flask
-- SQLite
-- `python-dotenv`
+---
 
-## Repository structure
+## Tech Stack
+
+- **Python 3.12+**
+- **Playwright (Chromium)** — browser automation and persistent session management
+- **Google Gemini API (`google-generativeai`)** — job fit evaluation and screening question responses
+- **Flask** — local web dashboard (`http://localhost:5000`)
+- **SQLite** — local tracking (`jobs.db`) to prevent duplicate applications
+- **`python-dotenv`** — environment and credential management
+
+---
+
+## Repository Structure
 
 ```text
 .
 ├── app.py                # Flask web dashboard entry point
-├── main.py               # CLI automation and diagnostics entry point
-├── config.py             # Environment variables, thresholds, daily limits, and job titles
-├── db.py                 # SQLite database helpers (jobs.db)
-├── gemini_engine.py      # Gemini API client, live resume parser, fit scoring, and salary conversion
-├── hitl_engine.py        # Human-in-the-loop pause/resume logic
+├── main.py               # CLI runner and diagnostics entry point
+├── config.py             # Search titles, thresholds, daily limits, and env config
+├── db.py                 # SQLite application tracking helpers (jobs.db)
+├── gemini_engine.py      # Gemini API client, live resume parser, fit & salary logic
+├── hitl_engine.py        # Human-in-the-loop pause/resume support
 ├── linkedin_driver.py    # Playwright LinkedIn Easy Apply automation driver
-├── resume_matcher.py     # Local resume loader and matcher helper
-├── resume.txt            # Your plain-text resume (read live on every job)
-├── requirements.txt      # Python package dependencies
-├── .env                  # Local secrets (API key & LinkedIn credentials — never commit)
-├── chrome_user_data/     # Persistent Chromium profile cookies/session
-├── extension/            # Optional Chrome extension source
+├── resume_matcher.py     # Local resume loader helper
+├── resume.txt            # Plain-text resume (parsed live on every job)
+├── requirements.txt      # Python dependencies
+├── .env                  # Local API key & LinkedIn credentials (gitignored)
+├── chrome_user_data/     # Persistent Chromium profile & cookies (gitignored)
+├── extension/            # Optional Chrome extension for manual autofill
 └── templates/            # Flask dashboard HTML templates
 ```
+
+---
 
 ## Prerequisites
 
 - Python 3.12 or newer
-- A Google Gemini API key (from Google AI Studio)
+- A Google Gemini API key (Google AI Studio)
 - A LinkedIn account
-- Terminal access with `pip`
 
-## Installation
+---
 
-1. **Clone the repository** and navigate into the project directory:
+## Setup & Installation
+
+1. **Clone this repository** and open the project directory:
 
 ```bash
 git clone <your-repo-url>
-cd Auto_job_apply-main
+cd Auto_job_apply
 ```
 
 2. **Create and activate a virtual environment:**
@@ -84,25 +100,25 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-3. **Install Python dependencies:**
+3. **Install dependencies:**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-*(If installing manually without `requirements.txt`: `pip install flask playwright google-generativeai python-dotenv scikit-learn`)*
-
-4. **Install Playwright's Chromium browser binary:**
+4. **Install Playwright's Chromium browser:**
 
 ```bash
 playwright install chromium
 ```
 
+---
+
 ## Configuration
 
 ### 1. Create `.env`
 
-Create a `.env` file in the project root with your Gemini API key and LinkedIn credentials:
+Add your Gemini API key and LinkedIn credentials in a `.env` file at the project root:
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
@@ -110,42 +126,36 @@ LINKEDIN_EMAIL=your_linkedin_email@example.com
 LINKEDIN_PASSWORD=your_linkedin_password_here
 ```
 
-### 2. Add your resume (`resume.txt`)
+### 2. Add Your Resume (`resume.txt`)
 
-Paste your full plain-text resume into `resume.txt` in the project root. The engine parses your contact info, skills, and work-experience timeline dynamically from this file on every job—you can edit and save `resume.txt` anytime without restarting the server.
+Paste your plain-text resume into `resume.txt`. Contact details, skills, and total experience are parsed dynamically from this file on every job.
 
-### 3. Tune search & matching settings (`config.py` & `gemini_engine.py`)
+### 3. Adjust Preferences
 
-- **`config.py`:** Adjust `JOB_TITLES`, `MATCH_THRESHOLD` (default `65.0`), and `DAILY_LIMIT` (default `30`).
-- **`gemini_engine.py`:** Adjust `TARGET_SALARY_LACS_PKR` (auto-converted to local currencies like SGD, AED, SAR, EUR, GBP, CHF), `MAX_ALLOWED_EXPERIENCE_YEARS` (default `4`), or set `OVERRIDE_TOTAL_YOE` to pin a fixed years-of-experience integer.
+- **`config.py`:** Customize `JOB_TITLES`, `MATCH_THRESHOLD` (default `65.0`), and `DAILY_LIMIT` (default `30`).
+- **`gemini_engine.py`:** Customize `TARGET_SALARY_LACS_PKR`, `MAX_ALLOWED_EXPERIENCE_YEARS` (default `4`), or set `OVERRIDE_TOTAL_YOE` to lock a fixed years-of-experience value.
+- **`linkedin_driver.py`:** Edit the `locations` dictionary inside `_search_keyword()` to add or remove target countries.
 
-## Running the project
+---
 
-Make sure your virtual environment is active (`(venv)` visible in your terminal).
+## Running the Project
 
-### 1. Run diagnostics check
+Make sure your virtual environment is active (`(venv)` shown in your terminal).
 
-Verify your environment, database, config, and dependencies before launching:
+### 1. Run Diagnostics
 
 ```bash
 python main.py --mode test
 ```
 
-### 2. Launch the web dashboard (Recommended)
+### 2. Start the Web Dashboard (Recommended)
 
 ```bash
 python main.py --mode web
 ```
+*(Or run `python app.py` directly.)*
 
-*(Or run Flask directly via `python app.py`.)*
-
-Open your browser and go to:
-
-```text
-http://localhost:5000
-```
-
-Click **Start Automation** to launch Chromium and monitor progress in real time.
+Open `http://localhost:5000` in your browser and click **Start Automation**.
 
 ### 3. Run via CLI
 
@@ -153,33 +163,17 @@ Click **Start Automation** to launch Chromium and monitor progress in real time.
 python main.py --mode cli --platform linkedin
 ```
 
-## Chrome extension (Optional)
+---
 
-A bundled Chrome extension is included in `extension/`. Load it manually by opening `chrome://extensions/`, enabling **Developer mode**, clicking **Load unpacked**, and selecting the `extension/` folder (or running `LOAD_EXTENSION.bat` on Windows).
+## Notes & Compliance
 
-## Environment and data files
+- **First-Time Sign-In:** On your first run, Chromium logs in using `.env` and pauses if LinkedIn prompts for 2FA or a CAPTCHA. Once completed, your session persists inside `chrome_user_data/`.
+- **Keep Secrets Local:** Ensure `.env`, `chrome_user_data/`, `jobs.db`, and `venv/` stay in `.gitignore`.
+- **Responsible Use:** Keep daily limits moderate and use this tool in accordance with LinkedIn's terms of service.
 
-Keep the following local files and folders in `.gitignore` so credentials and session data are never pushed to GitHub:
+---
 
-- `.env` — API key and LinkedIn login credentials
-- `chrome_user_data/` — persistent Chromium cookies and session state
-- `jobs.db` — local SQLite application log
-- `venv/` — Python virtual environment
+## Credits & License
 
-## Notes on usage
-
-- **First-time login:** On your first run (or after clearing `chrome_user_data/`), the script opens LinkedIn and signs in using `.env`. If LinkedIn triggers a CAPTCHA or 2FA code, complete it manually in the visible Chromium window—automation will detect the logged-in feed and resume automatically.
-- **Persistent sessions:** Subsequent runs reuse cookies saved in `chrome_user_data/` to avoid repeated logins.
-- **Daily cap:** Applications stop automatically once `DAILY_LIMIT` is reached for the current date in `jobs.db`.
-
-## Safety and compliance
-
-Use this project responsibly and only on accounts where you have permission to automate job applications. Respect LinkedIn's terms of use, keep `DAILY_LIMIT` reasonable, and avoid excessive request rates.
-
-## License
-
-This project is provided under the repository license included in the project root.
-
-## Contributing
-
-Pull requests and improvements are welcome. Keep `README.md` up to date when adding configuration options or driver changes, and verify changes with `python main.py --mode test`.
+- Original base project: [MadanAyyanavara/Auto_job_apply](https://github.com/MadanAyyanavara/Auto_job_apply)
+- License: Refer to the `LICENSE` file in the repository root.
